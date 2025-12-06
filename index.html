@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多人实时留言墙 - GitHub Pages</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --danger: #e74c3c;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: var(--dark);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--secondary);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+            z-index: 1000;
+        }
+        
+        .input-card {
+            background: var(--light);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--dark);
+            transition: all 0.2s;
+        }
+        
+        .toolbar-btn:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        
+        .send-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+            letter-spacing: 1px;
+        }
+        
+        .send-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.4);
+        }
+        
+        .send-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .messages-container {
+            margin-top: 30px;
+        }
+        
+        .messages-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .message {
+            background: white;
+            border-left: 5px solid var(--primary);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .message:hover {
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .message-author {
+            font-weight: 700;
+            color: var(--dark);
+            font-size: 1.1rem;
+        }
+        
+        .message-time {
+            color: #6c757d;
+            font-size: 0.85rem;
+            background: #f8f9fa;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        
+        .message-content {
+            line-height: 1.7;
+            font-size: 1.05rem;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .message-actions {
+            text-align: right;
+        }
+        
+        .delete-btn {
+            padding: 8px 16px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .refresh-btn {
+            padding: 10px 25px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .status {
+                position: static;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">🟢 已连接到留言墙</div>
+    
+    <div class="container">
+        <header>
+            <h1>💬 多人实时留言墙</h1>
+            <p style="color: #6c757d; margin-top: 10px;">基于 Supabase 的实时消息系统</p>
+        </header>
+        
+        <div class="input-card">
+            <div class="form-group">
+                <label for="nickname">👤 您的昵称</label>
+                <input type="text" id="nickname" placeholder="输入昵称（默认：匿名网友）" maxlength="20">
+            </div>
+            
+            <div class="form-group">
+                <label for="message">📝 留言内容</label>
+                <div class="toolbar">
+                    <button class="toolbar-btn" onclick="formatText('bold')">粗体</button>
+                    <button class="toolbar-btn" onclick="formatText('italic')">斜体</button>
+                    <button class="toolbar-btn" onclick="formatText('underline')">下划线</button>
+                    <button class="toolbar-btn" onclick="insertEmoji('😊')">😊</button>
+                    <button class="toolbar-btn" onclick="insertEmoji('👍')">👍</button>
+                    <button class="toolbar-btn" onclick="insertEmoji('❤️')">❤️</button>
+                </div>
+                <textarea id="message" placeholder="输入您的留言内容...（支持 Ctrl+Enter 快速发送）"></textarea>
+            </div>
+            
+            <button class="send-btn" onclick="sendMessage()">
+                🚀 发布留言
+            </button>
+            
+            <p style="text-align: center; margin-top: 15px; color: #6c757d; font-size: 0.9rem;">
+                提示：点击工具栏按钮可以格式化文本，支持表情符号
+            </p>
+        </div>
+        
+        <div class="messages-container">
+            <div class="messages-header">
+                <h2 style="color: var(--dark);">📨 所有留言</h2>
+                <button class="refresh-btn" onclick="loadMessages()">
+                    🔄 刷新留言
+                </button>
+            </div>
+            
+            <div id="messagesList">
+                <div class="empty-state">
+                    <div style="font-size: 48px;">📭</div>
+                    <h3 style="margin: 15px 0; color: #495057;">还没有留言</h3>
+                    <p>快来发布第一条留言吧！</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>📡 使用 Supabase 实时数据库 | 🌐 部署于 GitHub Pages</p>
+            <p>🕒 最后更新时间: <span id="updateTime"></span></p>
+        </div>
+    </div>
+
+    <!-- 引入 Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // 🔧 你的 Supabase 配置（已替换）
+        const SUPABASE_URL = 'https://pvdvqfkioyfwxutoiwiz.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2ZHZxZmtpb3lmd3h1dG9pd2l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMDg2NDYsImV4cCI6MjA4MDU4NDY0Nn0.2eQyOq9lcc0RJkgdaJGEYlmUFo96KZ96SfCpnfcNVmA';
+        
+        // 初始化 Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // 用户信息
+        let currentUser = {
+            id: null,
+            nickname: '匿名网友'
+        };
+        
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📱 留言墙已加载');
+            
+            // 初始化用户
+            initUser();
+            
+            // 设置事件监听器
+            setupEventListeners();
+            
+            // 加载留言
+            loadMessages();
+            
+            // 设置实时监听
+            setupRealtime();
+            
+            // 显示更新时间
+            document.getElementById('updateTime').textContent = new Date().toLocaleString('zh-CN');
+            
+            // 检查数据库连接
+            checkConnection();
+        });
+        
+        // 初始化用户
+        function initUser() {
+            // 获取或创建用户ID
+            let userId = localStorage.getItem('msg_wall_user_id');
+            if (!userId) {
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('msg_wall_user_id', userId);
+                console.log('👤 新用户创建:', userId);
+            }
+            currentUser.id = userId;
+            
+            // 获取保存的昵称
+            const savedNickname = localStorage.getItem('msg_wall_nickname');
+            if (savedNickname) {
+                document.getElementById('nickname').value = savedNickname;
+                currentUser.nickname = savedNickname;
+            }
+            
+            // 保存昵称到本地
+            document.getElementById('nickname').addEventListener('blur', function() {
+                const nickname = this.value.trim() || '匿名网友';
+                localStorage.setItem('msg_wall_nickname', nickname);
+                currentUser.nickname = nickname;
+                showStatus('昵称已保存: ' + nickname);
+            });
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // Ctrl+Enter 发送消息
+            document.getElementById('message').addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // 输入框自动聚焦
+            setTimeout(() => {
+                document.getElementById('nickname').focus();
+            }, 500);
+        }
+        
+        // 文本格式化
+        function formatText(command) {
+            const textarea = document.getElementById('message');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            let formattedText = selectedText;
+            
+            switch(command) {
+                case 'bold':
+                    formattedText = '**' + selectedText + '**';
+                    break;
+                case 'italic':
+                    formattedText = '*' + selectedText + '*';
+                    break;
+                case 'underline':
+                    formattedText = '_' + selectedText + '_';
+                    break;
+            }
+            
+            // 替换选中的文本
+            textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+            
+            // 恢复焦点和选择
+            textarea.focus();
+            textarea.setSelectionRange(start + formattedText.length, start + formattedText.length);
+        }
+        
+        // 插入表情符号
+        function insertEmoji(emoji) {
+            const textarea = document.getElementById('message');
+            const start = textarea.selectionStart;
+            
+            textarea.value = textarea.value.substring(0, start) + emoji + textarea.value.substring(start);
+            textarea.focus();
+            textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+        }
+        
+        // 发送留言
+        async function sendMessage() {
+            const nicknameInput = document.getElementById('nickname');
+            const messageInput = document.getElementById('message');
+            
+            const nickname = nicknameInput.value.trim() || '匿名网友';
+            const content = messageInput.value.trim();
+            
+            // 验证输入
+            if (!content) {
+                showStatus('请输入留言内容', 'warning');
+                messageInput.focus();
+                return;
+            }
+            
+            if (content.length > 1000) {
+                showStatus('留言内容过长（最多1000字）', 'warning');
+                return;
+            }
+            
+            // 保存昵称
+            localStorage.setItem('msg_wall_nickname', nickname);
+            currentUser.nickname = nickname;
+            
+            // 显示发送中状态
+            showStatus('正在发送留言...', 'info');
+            
+            try {
+                // 发送到数据库
+                const { data, error } = await supabase
+                    .from('messages')
+                    .insert([
+                        {
+                            content: content,
+                            nickname: nickname,
+                            user_id: currentUser.id,
+                            created_at: new Date().toISOString()
+                        }
+                    ])
+                    .select();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // 清空输入框
+                messageInput.value = '';
+                
+                // 显示成功状态
+                showStatus('留言发布成功！', 'success');
+                
+                // 播放提示音（可选）
+                playSound('success');
+                
+                // 自动滚动到最新留言
+                setTimeout(() => {
+                    const messagesList = document.getElementById('messagesList');
+                    messagesList.scrollTop = 0;
+                }, 100);
+                
+            } catch (error) {
+                console.error('发送失败:', error);
+                
+                if (error.message.includes('does not exist')) {
+                    showStatus('数据库表不存在，请先创建表', 'error');
+                    showTableCreationInstructions();
+                } else {
+                    showStatus('发送失败，请检查网络连接', 'error');
+                }
+                
+                // 保存到本地作为备份
+                saveMessageLocally({
+                    id: Date.now(),
+                    content: content,
+                    nickname: nickname,
+                    user_id: currentUser.id,
+                    created_at: new Date().toISOString()
+                });
+            }
+        }
+        
+        // 加载留言
+        async function loadMessages() {
+            showStatus('正在加载留言...', 'info');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                displayMessages(data || []);
+                showStatus(`已加载 ${data?.length || 0} 条留言`, 'success');
+                
+            } catch (error) {
+                console.error('加载留言失败:', error);
+                showStatus('加载失败，使用本地数据', 'warning');
+                
+                // 尝试加载本地保存的留言
+                const localMessages = getLocalMessages();
+                displayMessages(localMessages);
+            }
+        }
+        
+        // 显示留言
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesList');
+            
+            if (!messages || messages.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 48px;">📭</div>
+                        <h3 style="margin: 15px 0; color: #495057;">还没有留言</h3>
+                        <p>快来发布第一条留言吧！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            messages.forEach(msg => {
+                const isOwn = msg.user_id === currentUser.id;
+                const time = formatTime(msg.created_at);
+                const formattedContent = formatContent(msg.content);
+                
+                html += `
+                    <div class="message" data-id="${msg.id}">
+                        <div class="message-header">
+                            <div class="message-author">
+                                ${escapeHtml(msg.nickname)}
+                                ${isOwn ? '<span style="font-size:0.8rem;color:#3498db;margin-left:8px;">(我)</span>' : ''}
+                            </div>
+                            <div class="message-time">${time}</div>
+                        </div>
+                        <div class="message-content">${formattedContent}</div>
+                        ${isOwn ? `
+                        <div class="message-actions">
+                            <button class="delete-btn" onclick="deleteMessage(${msg.id})">删除留言</button>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 删除留言
+        async function deleteMessage(id) {
+            if (!confirm('确定要删除这条留言吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            showStatus('正在删除...', 'info');
+            
+            try {
+                const { error } = await supabase
+                    .from('messages')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                showStatus('留言已删除', 'success');
+                playSound('delete');
+                
+                // 从UI中移除
+                const messageEl = document.querySelector(`.message[data-id="${id}"]`);
+                if (messageEl) {
+                    messageEl.style.opacity = '0';
+                    messageEl.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        messageEl.remove();
+                    }, 300);
+                }
+                
+            } catch (error) {
+                console.error('删除失败:', error);
+                showStatus('删除失败', 'error');
+            }
+        }
+        
+        // 设置实时监听
+        function setupRealtime() {
+            const channel = supabase
+                .channel('messages-channel')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messages'
+                    },
+                    (payload) => {
+                        console.log('收到新留言:', payload.new);
+                        showStatus('收到新留言！', 'info');
+                        playSound('notification');
+                        
+                        // 重新加载留言
+                        loadMessages();
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'DELETE',
+                        schema: 'public',
+                        table: 'messages'
+                    },
+                    () => {
+                        console.log('留言被删除');
+                        loadMessages();
+                    }
+                )
+                .subscribe();
+        }
+        
+        // 检查数据库连接
+        async function checkConnection() {
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('id')
+                    .limit(1);
+                
+                if (error) {
+                    if (error.message.includes('does not exist')) {
+                        showStatus('数据库表不存在，请先创建', 'error');
+                        showTableCreationInstructions();
+                    } else {
+                        showStatus('数据库连接失败', 'error');
+                    }
+                } else {
+                    showStatus('数据库连接正常', 'success');
+                }
+            } catch (error) {
+                showStatus('连接检查失败', 'warning');
+            }
+        }
+        
+        // 显示创建表的说明
+        function showTableCreationInstructions() {
+            const sql = `CREATE TABLE messages (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  content TEXT NOT NULL,
+  nickname TEXT DEFAULT '匿名网友',
+  user_id TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 启用实时订阅
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;`;
+            
+            const instructions = document.createElement('div');
+            instructions.innerHTML = `
+                <div style="background:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:20px 0;border-radius:5px;">
+                    <h4 style="margin-top:0;color:#856404;">需要创建数据库表</h4>
+                    <p style="color:#856404;">请登录 Supabase 控制台，进入 SQL 编辑器，运行以下SQL：</p>
+                    <pre style="background:#f8f9fa;padding:10px;border-radius:5px;overflow:auto;color:#333;">${sql}</pre>
+                    <p style="color:#856404;">创建完成后刷新页面即可使用。</p>
+                </div>
+            `;
+            
+            document.querySelector('.input-card').after(instructions);
+        }
+        
+        // 辅助函数
+        function formatTime(isoString) {
+            if (!isoString) return '未知时间';
+            
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return '刚刚';
+            if (diffMins < 60) return `${diffMins}分钟前`;
+            if (diffHours < 24) return `${diffHours}小时前`;
+            if (diffDays < 7) return `${diffDays}天前`;
+            
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        function formatContent(content) {
+            if (!content) return '';
+            
+            return escapeHtml(content)
+                .replace(/\n/g, '<br>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/_(.*?)_/g, '<u>$1</u>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            
+            const colors = {
+                success: '#2ecc71',
+                error: '#e74c3c',
+                warning: '#f39c12',
+                info: '#3498db'
+            };
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            };
+            
+            statusEl.textContent = `${icons[type] || 'ℹ️'} ${message}`;
+            statusEl.style.backgroundColor = colors[type] || colors.info;
+            
+            // 3秒后恢复
+            if (type !== 'info') {
+                setTimeout(() => {
+                    statusEl.textContent = '🟢 已连接到留言墙';
+                    statusEl.style.backgroundColor = colors.success;
+                }, 3000);
+            }
+        }
+        
+        function playSound(type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                if (type === 'success') {
+                    oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                    oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+                } else if (type === 'notification') {
+                    oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+                } else if (type === 'delete') {
+                    oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // A3
+                }
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) {
+                console.log('音频播放失败，浏览器可能不支持');
+            }
+        }
+        
+        // 本地存储备份
+        function saveMessageLocally(message) {
+            try {
+                let messages = JSON.parse(localStorage.getItem('local_messages_backup') || '[]');
+                messages.unshift(message);
+                
+                // 只保留最近50条
+                if (messages.length > 50) {
+                    messages = messages.slice(0, 50);
+                }
+                
+                localStorage.setItem('local_messages_backup', JSON.stringify(messages));
+            } catch (e) {
+                console.error('本地保存失败:', e);
+            }
+        }
+        
+        function getLocalMessages() {
+            try {
+                return JSON.parse(localStorage.getItem('local_messages_backup') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+        
+        // 每2分钟自动刷新一次
+        setInterval(loadMessages, 2 * 60 * 1000);
+        
+        // 页面可见时刷新
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                loadMessages();
+            }
+        });
+    </script>
+</body>
+</html>
